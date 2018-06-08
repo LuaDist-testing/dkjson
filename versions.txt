@@ -1,3 +1,13 @@
+Version 2.2 (2012-04-28)
+===========
+
+Changes since version 2.1:
+
+  *  __jsontype is only used for empty tables.
+  *  It is possible to decode tables without assigning metatables.
+  *  Locations for error messages were off by one in the first line.
+  *  There is no LPeg version of json.quotestring anymore.
+
 Version 2.1 (2011-07-08)
 ===========
 

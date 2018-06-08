@@ -1,16 +1,16 @@
 -- This file was automatically generated for the LuaDist project.
 
 package = "dkjson"
-version = "2.1-1"
+version = "2.2-1"
 -- LuaDist source
 source = {
-  tag = "2.1-1",
+  tag = "2.2-1",
   url = "git://github.com/LuaDist-testing/dkjson.git"
 }
 -- Original source
 -- source = {
---   url = "http://chiselapp.com/user/dhkolf/repository/dkjson/tarball/dkjson-2.1.tar.gz?uuid=55350b663c0073dd48e26edc6ec575cc4e354986",
---   file = "dkjson-2.1.tar.gz"
+--   url = "http://chiselapp.com/user/dhkolf/repository/dkjson/tarball/dkjson-2.2.tar.gz?uuid=release_2_2",
+--   file = "dkjson-2.2.tar.gz"
 -- }
 description = {
   summary = "David Kolf's JSON module for Lua",
@@ -18,9 +18,9 @@ description = {
 dkjson is a module for encoding and decoding JSON data. It supports UTF-8.
 
 JSON (JavaScript Object Notation) is a format for serializing data based
-on the format for JavaScript data structures.
+on the syntax for JavaScript data structures.
 
-dkjson is written in Lua without any depencies, but
+dkjson is written in Lua without any dependencies, but
 when LPeg is available dkjson uses it to speed up decoding.
 ]],
   homepage = "http://chiselapp.com/user/dhkolf/repository/dkjson/",
@@ -35,3 +35,4 @@ build = {
     dkjson = "dkjson.lua"
   }
 }
+

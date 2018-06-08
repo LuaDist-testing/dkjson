@@ -6,11 +6,18 @@ local test_module, opt = ... -- command line argument
 --local test_module = 'dkjson'
 --local test_module = 'dkjson-nopeg'
 --local test_module = 'fleece'
+--local test_module = 'jf-json'
 --locel test_module = 'lua-yajl'
 --local test_module = 'mp-cjson'
 --local test_module = 'nm-json'
 --local test_module = 'sb-json'
 --local test_module = 'th-json'
+
+--local opt = "esc" -- Test which characters in the BMP get escaped and whether this is correct
+--local opt = "esc_full" -- Full range from 0 to 0x10ffff
+--local opt = "esc_asc" -- Just 0 to 127
+
+--local opt = "refcycle" -- What happens when a reference cycle gets encoded?
 
 if test_module == 'dkjson-nopeg' then
   test_module = 'dkjson'
@@ -39,6 +46,11 @@ elseif test_module == 'fleece' then
   -- http://www.eonblast.com/fleece/
   local fleece = require "fleece"
   encode = function(x) return fleece.json(x, "E4") end
+elseif test_module == 'jf-json' then
+  -- http://regex.info/blog/lua/json
+  local json = require "jfjson" -- renamed, the original file was just 'JSON'
+  encode = function(x) return json:encode(x) end
+  decode = function(x) return json:decode(x) end
 elseif test_module == 'lua-yajl' then
   -- http://github.com/brimworks/lua-yajl
   local yajl = require ("yajl")
@@ -52,8 +64,8 @@ elseif test_module == 'mp-cjson' then
 elseif test_module == 'nm-json' then
   -- http://luaforge.net/projects/luajsonlib/
   local json = require "LuaJSON"
-  encode = json.stringify
-  decode = json.parse
+  encode = json.encode or json.stringify
+  decode = json.decode or json.parse
 elseif test_module == 'sb-json' then
   -- http://www.chipmunkav.com/downloads/Json.lua
   local json = require "sbjson" -- renamed, the original file was just 'Json'
@@ -95,13 +107,31 @@ else
 
   r,x = pcall (encode, { [1000] = "x" })
   if not r then
-    print ("encoding a sparse array raises an error:", x)
+    print ("encoding a sparse array (#=0) raises an error:", x)
   else
     if #x > 30 then
-      print ("sparse array encoded as:", x:sub(1,15).." <...> "..x:sub(-15,-1), "#"..#x)
+      print ("sparse array (#=0) encoded as:", x:sub(1,15).." <...> "..x:sub(-15,-1), "#"..#x)
     else
-      print ("sparse array encoded as:", x)
+      print ("sparse array (#=0) encoded as:", x)
     end
+  end
+
+  r,x = pcall (encode, { [1] = "a", [1000] = "x" })
+  if not r then
+    print ("encoding a sparse array (#=1) raises an error:", x)
+  else
+    if #x > 30 then
+      print ("sparse array (#=1) encoded as:", x:sub(1,15).." <...> "..x:sub(-15,-1), "#str="..#x)
+    else
+      print ("sparse array (#=1) encoded as:", x)
+    end
+  end
+
+  r,x = pcall (encode, { [1] = "a", [5] = "c", ["x"] = "x" })
+  if not r then
+    print ("encoding a mixed table raises an error:", x)
+  else
+    print ("mixed table encoded as:", x)
   end
 
   r, x = pcall(encode, { math.huge*0 }) -- NaN
@@ -192,8 +222,9 @@ else
     end
   end
 
-  if test_module == 'cmj-json' then
-    print ("decoding a big array takes ages (or forever?) on cmj-json")
+  if false and test_module == 'cmj-json' then
+    -- unfortunatly the version can't be read
+    print ("decoding a big array takes ages (or forever?) on cmj-json prior to version 0.9.5")
   else
     r, x = pcall(decode, "["..("0,"):rep(100000).."0]")
     if not r then
@@ -215,6 +246,13 @@ else
     print ("decoding an empty array raises an error:", x)
   end
 
+  r, x = pcall(decode, "[1e+2]")
+  if not r then
+    print ("decoding a number with exponential notation raises an error:", x)
+  elseif x[1] ~= 1e+2 then
+    print ("1e+2 decoded incorrectly:", r[1])
+  end
+
   -- special tests for dkjson:
   if test_module == 'dkjson' then
     x = dkdecode[=[ [{"x":0}] ]=]
@@ -223,6 +261,15 @@ else
     end
     if getmetatable(x[1]).__jsontype ~= 'object' then
       print ("<metatable>.__jsontype ~= object")
+    end
+    
+    local x,p,m = dkdecode" invalid "
+    if p ~= 2 or type(m) ~= 'string' or not m:find("at line 1, column 2$") then
+      print (("Invalid location: position=%d, message=%q"):format(p,m))
+    end
+    local x,p,m = dkdecode" \n invalid "
+    if p ~= 4 or type(m) ~= 'string' or not m:find("at line 2, column 2$") then
+      print (("Invalid location: position=%d, message=%q"):format(p,m))
     end
   end
 end
@@ -313,7 +360,8 @@ end
     elseif x == escapecodes[t[1]] then
       esc[i] = 'c'
     elseif x:sub(1,1) == "\\" then
-      print ("Invalid escape code for "..i..":", x)
+      --print ("Invalid escape code for "..i..":", x)
+      escerr[i] = xe
     end
   end
   do
@@ -327,7 +375,11 @@ end
       if i-1 > first then
         print ("Escaped from "..first.." to "..i-1)
       else
-        print ("Escaped "..first)
+        if first >= 32 and first <= 127 then
+          print ("Escaped "..first.." ("..string.char(first)..")")
+        else
+          print ("Escaped "..first)
+        end
       end
     end
   end

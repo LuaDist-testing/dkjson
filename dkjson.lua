@@ -1,9 +1,12 @@
+    -- Module options:
+    local always_try_using_lpeg = true
+
     --[==[
 
 David Kolf's JSON module for Lua 5.1/5.2
 ========================================
 
-*Version 2.1*
+*Version 2.2*
 
 This module writes no global values, not even the module table.
 Import it using
@@ -71,6 +74,10 @@ a metatable with the `__jsontype` field set to either `array` or
 
     json.decode (string, position, null, objectmeta, arraymeta)
 
+To prevent the assigning of metatables pass `nil`:
+
+    json.decode (string, position, null, nil)
+
 `<metatable>.__jsonorder`
 -------------------------
 
@@ -79,9 +86,8 @@ a metatable with the `__jsontype` field set to either `array` or
 `<metatable>.__jsontype`
 ------------------------
 
-`__jsontype` can be either `"array"` or `"object"`. This is mainly useful
-for tables that can be empty. (The default for empty tables is
-`"array"`).
+`__jsontype` can be either `"array"` or `"object"`. This value is only
+checked for empty tables. (The default for empty tables is `"array"`).
 
 `<metatable>.__tojson (self, state)`
 ------------------------------------
@@ -99,7 +105,7 @@ You can use this value for setting explicit `null` values.
 `json.version`
 --------------
 
-Set to `"dkjson 2.1"`.
+Set to `"dkjson 2.2"`.
 
 `json.quotestring (string)`
 ---------------------------
@@ -117,19 +123,15 @@ according to `state.level`.
 LPeg support
 ------------
 
-When the local configuration variable
-`always_try_using_lpeg` is set, this module tries to load LPeg to
-replace the functions `quotestring` and `decode`. The speed increase
-is significant. You can get the LPeg module at
+When the local configuration variable `always_try_using_lpeg` is set,
+this module tries to load LPeg to replace the `decode` function. The
+speed increase is significant. You can get the LPeg module at
   <http://www.inf.puc-rio.br/~roberto/lpeg/>.
 When LPeg couldn't be loaded, the pure Lua functions stay active.
 
 In case you don't want this module to require LPeg on its own,
-disable this option:
-
-    --]==]
-    local always_try_using_lpeg = true
-    --[==[
+disable the option `always_try_using_lpeg` in the options section at
+the top of the module.
 
 In this case you can later load LPeg support using
 
@@ -152,12 +154,17 @@ LPeg isn't found.
 
 This variable is set to `true` when LPeg was loaded successfully.
 
+---------------------------------------------------------------------
+
+Contact
+-------
+
 You can contact the author by sending an e-mail to 'kolf' at the
 e-mail provider 'gmx.de'.
 
 ---------------------------------------------------------------------
 
-*Copyright (C) 2010, 2011 David Heiko Kolf*
+*Copyright (C) 2010, 2011, 2012 David Heiko Kolf*
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -190,20 +197,16 @@ SOFTWARE.
 -- global dependencies:
 local pairs, type, tostring, tonumber, getmetatable, setmetatable, rawset =
       pairs, type, tostring, tonumber, getmetatable, setmetatable, rawset
-local error, require, pcall = error, require, pcall 
+local error, require, pcall, select = error, require, pcall, select
 local floor, huge = math.floor, math.huge
 local strrep, gsub, strsub, strbyte, strchar, strfind, strlen, strformat =
       string.rep, string.gsub, string.sub, string.byte, string.char,
       string.find, string.len, string.format
 local concat = table.concat
 
-if _VERSION == 'Lua 5.1' then
-  local function noglobals (s,k,v) error ("global access: " .. k, 2) end
-  setfenv (1, setmetatable ({}, { __index = noglobals, __newindex = noglobals }))
-end
 local _ENV = nil -- blocking globals in Lua 5.2
 
-local json = { version = "dkjson 2.1" }
+local json = { version = "dkjson 2.2" }
 
 pcall (function()
   -- Enable access to blocked metatables.
@@ -383,15 +386,9 @@ encode2 = function (value, indent, level, buffer, buflen, tables, globalorder)
     end
     tables[value] = true
     level = level + 1
-    local metatype = valmeta and valmeta.__jsontype
-    local isa, n
-    if metatype == 'array' then
-      isa = true
-      n = value.n or #value
-    elseif metatype == 'object' then
+    local isa, n = isarray (value)
+    if n == 0 and valmeta and valmeta.__jsontype == 'object' then
       isa = false
-    else
-      isa, n = isarray (value)
     end
     local msg
     if isa then -- JSON array
@@ -468,7 +465,7 @@ function json.encode (value, state)
 end
 
 local function loc (str, where)
-  local line, pos, linepos = 1, 1, 1
+  local line, pos, linepos = 1, 1, 0
   while true do
     pos = strfind (str, "\n", pos, true)
     if pos and pos < where then
@@ -670,9 +667,16 @@ scanvalue = function (str, pos, nullval, objectmeta, arraymeta)
   end
 end
 
-function json.decode (str, pos, nullval, objectmeta, arraymeta)
-  objectmeta = objectmeta or {__jsontype = 'object'}
-  arraymeta = arraymeta or {__jsontype = 'array'}
+local function optionalmetatables(...)
+  if select("#", ...) > 0 then
+    return ...
+  else
+    return {__jsontype = 'object'}, {__jsontype = 'array'}
+  end
+end
+
+function json.decode (str, pos, nullval, ...)
+  local objectmeta, arraymeta = optionalmetatables(...)
   return scanvalue (str, pos, nullval, objectmeta, arraymeta)
 end
 
@@ -680,23 +684,6 @@ function json.use_lpeg ()
   local g = require ("lpeg")
   local pegmatch = g.match
   local P, S, R, V = g.P, g.S, g.R, g.V
-
-  local SpecialChars = (R"\0\31" + S"\"\\\127" +
-    P"\194" * (R"\128\159" + P"\173") +
-    P"\216" * R"\128\132" +
-    P"\220\132" +
-    P"\225\158" * S"\180\181" +
-    P"\226\128" * (R"\140\143" + S"\168\175") +
-    P"\226\129" * R"\160\175" +
-    P"\239\187\191" +
-    P"\229\191" + R"\176\191") / escapeutf8
-
-  local QuoteStr = g.Cs (g.Cc "\"" * (SpecialChars + 1)^0 * g.Cc "\"")
-
-  quotestring = function (str)
-    return pegmatch (QuoteStr, str)
-  end
-  json.quotestring = quotestring
 
   local function ErrorCall (str, pos, msg, state)
     if not state.msg then
@@ -776,11 +763,9 @@ function json.use_lpeg ()
   ObjectContent = Pair * Space * (P"," * g.Cc'cont' + g.Cc'last') * g.Cp()
   local DecodeValue = ExpectedValue * g.Cp ()
 
-  function json.decode (str, pos, nullval, objectmeta, arraymeta)
-    local state = {
-      objectmeta = objectmeta or {__jsontype = 'object'},
-      arraymeta = arraymeta or {__jsontype = 'array'}
-    }
+  function json.decode (str, pos, nullval, ...)
+    local state = {}
+    state.objectmeta, state.arraymeta = optionalmetatables(...)
     local obj, retpos = pegmatch (DecodeValue, str, pos, nullval, state)
     if state.msg then
       return nil, state.pos, state.msg

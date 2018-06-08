@@ -5,6 +5,7 @@ local test_module = ... -- command line argument
 --local test_module = 'dkjson'
 --local test_module = 'dkjson-nopeg'
 --local test_module = 'fleece'
+--local test_module = 'jf-json'
 --locel test_module = 'lua-yajl'
 --local test_module = 'mp-cjson'
 --local test_module = 'nm-json'
@@ -33,6 +34,11 @@ elseif test_module == 'fleece' then
   -- http://www.eonblast.com/fleece/
   local fleece = require "fleece"
   encode = function(x) return fleece.json(x, "E4") end
+elseif test_module == 'jf-json' then
+  -- http://regex.info/blog/lua/json
+  local json = require "jfjson" -- renamed, the original file was just 'JSON'
+  encode = function(x) return json:encode(x) end
+  decode = function(x) return json:decode(x) end
 elseif test_module == 'lua-yajl' then
   -- http://github.com/brimworks/lua-yajl
   local yajl = require ("yajl")
@@ -46,8 +52,8 @@ elseif test_module == 'mp-cjson' then
 elseif test_module == 'nm-json' then
   -- http://luaforge.net/projects/luajsonlib/
   local json = require "LuaJSON"
-  encode = json.stringify
-  decode = json.parse
+  encode = json.encode or json.stringify
+  decode = json.decode or json.parse
 elseif test_module == 'sb-json' then
   -- http://www.chipmunkav.com/downloads/Json.lua
   local json = require "sbjson" -- renamed, the original file was just 'Json'
@@ -70,7 +76,7 @@ local str = [[
 {
   "Herausgeber": "Xema",
   "Nummer": "1234-5678-9012-3456",
-  "Deckung": 2e+6,
+  "Deckung": 26,
   "Währung": "EUR",
   "Inhaber": {
     "Name": "Mustermann",
@@ -79,7 +85,7 @@ local str = [[
     "Depot": {},
     "Hobbys": [ "Reiten", "Golfen", "Lesen" ],
     "Alter": 42,
-    "Kinder": [],
+    "Kinder": [0],
     "Partner": null
   }
 }
