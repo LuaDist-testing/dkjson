@@ -1,16 +1,16 @@
 -- This file was automatically generated for the LuaDist project.
 
 package = "dkjson"
-version = "2.4-1"
+version = "2.5-1"
 -- LuaDist source
 source = {
-  tag = "2.4-1",
+  tag = "2.5-1",
   url = "git://github.com/LuaDist-testing/dkjson.git"
 }
 -- Original source
 -- source = {
---   url = "http://dkolf.de/src/dkjson-lua.fsl/tarball/dkjson-2.4.tar.gz?uuid=release_2_4",
---   file = "dkjson-2.4.tar.gz"
+--   url = "http://dkolf.de/src/dkjson-lua.fsl/tarball/dkjson-2.5.tar.gz?uuid=release_2_5",
+--   file = "dkjson-2.5.tar.gz"
 -- }
 description = {
   summary = "David Kolf's JSON module for Lua",
