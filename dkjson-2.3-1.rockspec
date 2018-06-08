@@ -1,16 +1,16 @@
 -- This file was automatically generated for the LuaDist project.
 
 package = "dkjson"
-version = "2.2-1"
+version = "2.3-1"
 -- LuaDist source
 source = {
-  tag = "2.2-1",
+  tag = "2.3-1",
   url = "git://github.com/LuaDist-testing/dkjson.git"
 }
 -- Original source
 -- source = {
---   url = "http://chiselapp.com/user/dhkolf/repository/dkjson/tarball/dkjson-2.2.tar.gz?uuid=release_2_2",
---   file = "dkjson-2.2.tar.gz"
+--   url = "http://dkolf.de/src/dkjson-lua.fsl/tarball/dkjson-2.3.tar.gz?uuid=release_2_3",
+--   file = "dkjson-2.3.tar.gz"
 -- }
 description = {
   summary = "David Kolf's JSON module for Lua",
@@ -23,11 +23,11 @@ on the syntax for JavaScript data structures.
 dkjson is written in Lua without any dependencies, but
 when LPeg is available dkjson uses it to speed up decoding.
 ]],
-  homepage = "http://chiselapp.com/user/dhkolf/repository/dkjson/",
+  homepage = "http://dkolf.de/src/dkjson-lua.fsl/",
   license = "MIT/X11"
 }
 dependencies = {
-  "lua >= 5.1"
+  "lua >= 5.1, < 5.3"
 }
 build = {
   type = "builtin",
@@ -35,4 +35,3 @@ build = {
     dkjson = "dkjson.lua"
   }
 }
-
