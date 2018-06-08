@@ -19,11 +19,28 @@ local test_module, opt = ... -- command line argument
 
 --local opt = "refcycle" -- What happens when a reference cycle gets encoded?
 
+local testlocale = "de_DE.UTF8"
+
+local function inlocale(fn)
+  local oldloc = os.setlocale(nil, 'numeric')
+  if not os.setlocale(testlocale, 'numeric') then
+    print("test could not switch to locale "..testlocale)
+  else
+    fn()
+  end
+  os.setlocale(oldloc, 'numeric')
+end
+
 if test_module == 'dkjson-nopeg' then
   test_module = 'dkjson'
   package.preload["lpeg"] = function () error "lpeg disabled" end
   package.loaded["lpeg"] = nil
   lpeg = nil
+end
+
+if test_module == 'dkjson-lulpeg' then
+  test_module = 'dkjson'
+  package.loaded["lpeg"] = require "lulpeg"
 end
 
 do
@@ -183,6 +200,15 @@ else
       end
     end
   end
+
+  inlocale(function ()
+    local r, x = pcall(encode, { 0.5 })
+    if not r then
+      print("encoding 0.5 in locale raises an error:", x)
+    elseif not x:find(".", 1, true) then
+      print("In locale 0.5 isn't converted into valid JSON:", x)
+    end
+  end)
 end
 
 if not decode then
@@ -261,6 +287,17 @@ else
     print ("1e+2 decoded incorrectly:", r[1])
   end
 
+  inlocale(function ()
+    local r, x = pcall(decode, "[0.5]")
+    if not r then
+      print("decoding 0.5 in locale raises an error:", x)
+    elseif not x then
+      print("cannot decode 0.5 in locale")
+    elseif x[1] ~= 0.5 then
+      print("decoded 0.5 incorrectly in locale:", x[1])
+    end
+  end)
+
   -- special tests for dkjson:
   if test_module == 'dkjson' then
     x = dkdecode[=[ [{"x":0}] ]=]
@@ -269,7 +306,7 @@ else
       print ("<metatable>.__jsontype ~= array")
     end
     local m = getmetatable(x[1])
-    if not m or getmetatable(m).__jsontype ~= 'object' then
+    if not m or m.__jsontype ~= 'object' then
       print ("<metatable>.__jsontype ~= object")
     end
     
